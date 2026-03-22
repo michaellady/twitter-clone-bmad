@@ -8,12 +8,111 @@ datasource db {
 }
 
 model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  bio           String    @default("")
+  avatarUrl     String    @default("/default-avatar.png")
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+  tweets        Tweet[]
+  likes         Like[]
+  following     Follow[] @relation("following")
+  followers     Follow[] @relation("followers")
+  activities    Activity[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Tweet {
   id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  bio          String   @default("")
-  avatarUrl    String   @default("/default-avatar.png")
+  content      String
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  authorId     String
+  parentId     String?
+  quoteTweetId String?
+
+  author       User     @relation(fields: [authorId], references: [id])
+  parent       Tweet?   @relation("replies", fields: [parentId], references: [id])
+  replies      Tweet[]  @relation("replies")
+  quoteTweet   Tweet?   @relation("quotes", fields: [quoteTweetId], references: [id])
+  quotedBy     Tweet[]  @relation("quotes")
+  likes        Like[]
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userId    String
+  tweetId   String
+
+  user  User  @relation(fields: [userId], references: [id])
+  tweet Tweet @relation(fields: [tweetId], references: [id])
+
+  @@unique([userId, tweetId])
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  followerId  String
+  followingId String
+
+  follower  User @relation("following", fields: [followerId], references: [id])
+  following User @relation("followers", fields: [followingId], references: [id])
+
+  @@unique([followerId, followingId])
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  type      String
+  createdAt DateTime @default(now())
+  userId    String
+  actorId   String
+  tweetId   String?
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Verification {
+  id         String    @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
 }
